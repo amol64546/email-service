@@ -60,7 +60,7 @@ public class EmailController {
         .addAttribute("id", emailRequest.getId());
     try {
 
-      if (emailTrackingService.getEmailCountForToday() >= 1) {
+      if (emailTrackingService.getEmailCountForToday() >= 100) {
         throw new EmailLimitExceededException("The daily email limit of 100 has been reached.");
       }
 
