@@ -2,10 +2,8 @@ package com.test.emailtest.controller;
 
 import com.test.emailtest.entity.EmailRequest;
 import com.test.emailtest.service.EmailService;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -21,13 +19,16 @@ public class EmailController {
   private final EmailService emailService;
 
 
-  @PostMapping(path = "/send-email", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @PostMapping(path = "/send-email")
   public ResponseEntity<ModelMap> sendEmail(
-      @ModelAttribute EmailRequest emailRequest, HttpServletRequest httpServletRequest) {
+      @ModelAttribute EmailRequest emailRequest) {
 
     ModelMap response = new ModelMap();
     try {
-      emailService.sendEmail(emailRequest);
+      for (String email : emailRequest.getTo()) {
+        emailService.sendEmail(emailRequest, email);
+      }
+      emailService.saveEmailRequest(emailRequest);
       response.addAttribute("message", "Email queued successfully.");
       return ResponseEntity.status(HttpStatus.ACCEPTED)
           .body(response);
