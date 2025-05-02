@@ -1,24 +1,19 @@
 package com.test.emailtest.service;
 
-import com.sendgrid.Method;
-import com.sendgrid.Request;
-import com.sendgrid.Response;
-import com.sendgrid.SendGrid;
-import com.sendgrid.helpers.mail.Mail;
-import com.sendgrid.helpers.mail.objects.Attachments;
-import com.sendgrid.helpers.mail.objects.ClickTrackingSetting;
-import com.sendgrid.helpers.mail.objects.Content;
-import com.sendgrid.helpers.mail.objects.Email;
-import com.sendgrid.helpers.mail.objects.Personalization;
-import com.sendgrid.helpers.mail.objects.TrackingSettings;
 import com.test.emailtest.entity.EmailRequest;
 import com.test.emailtest.repo.EmailRepository;
-import java.io.IOException;
-import java.util.Base64;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -27,75 +22,42 @@ public class EmailService {
 
   private final EmailRepository emailRepository;
   private final EmailTrackingService emailTrackingService;
+  private final JavaMailSenderImpl mailSender;
 
   @Async
-  public void sendEmail(EmailRequest emailRequest) throws IOException {
+  public void sendEmail(EmailRequest emailRequest) {
+    List<MimeMessage> messages = new ArrayList<>(emailRequest.getTo().size());
 
-    System.out.println("-----------------------------------");
+    for (String email : emailRequest.getTo()) {
+      try {
+        MimeMessage msg = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(msg, true);
 
-    int total = emailRequest.getTo().size();
-    int success = 0;
+        helper.setSubject(emailRequest.getSubject());
+        helper.setTo(email);
+        helper.setText(emailRequest.getBody(), false);
 
-    for (String recipient : emailRequest.getTo()) {
-      // Create the email for each recipient individually
-      Mail mail = new Mail();
-      mail.setFrom(new Email(emailRequest.getFromEmail()));
-      mail.setSubject(emailRequest.getSubject());
-      mail.addContent(new Content("text/plain", emailRequest.getBody()));
+        // Add attachment (MultipartFile)
+        MultipartFile attachment = emailRequest.getAttachment(); // assume this is part of the request
+        if (attachment != null && !attachment.isEmpty()) {
+          // Attach the file to the email
+          helper.addAttachment(Objects.requireNonNull(attachment.getOriginalFilename()),
+              attachment); // Uses MultipartFile directly
+        }
 
-      TrackingSettings trackingSettings = new TrackingSettings();
-      ClickTrackingSetting clickTrackingSetting = new ClickTrackingSetting();
-      clickTrackingSetting.setEnable(false);
-      clickTrackingSetting.setEnableText(false);
-      trackingSettings.setClickTrackingSetting(clickTrackingSetting);
-      mail.setTrackingSettings(trackingSettings);
-
-      // Personalization for each recipient
-      Personalization personalization = new Personalization();
-      personalization.addTo(new Email(recipient));
-      mail.addPersonalization(personalization);
-
-
-      // Attachment (if present)
-      if (emailRequest.getAttachment() != null && !emailRequest.getAttachment().isEmpty()) {
-        Attachments attachments = new Attachments();
-        byte[] fileBytes = emailRequest.getAttachment().getBytes();
-        String encoded = Base64.getEncoder().encodeToString(fileBytes);
-
-        attachments.setContent(encoded);
-        attachments.setType(emailRequest.getAttachment().getContentType());
-        attachments.setFilename(emailRequest.getAttachment().getOriginalFilename());
-        attachments.setDisposition("attachment");
-        mail.addAttachments(attachments);
-      }
-
-      // Send email
-      Request request = new Request();
-      request.setMethod(Method.POST);
-      request.setEndpoint("mail/send");
-      request.setBody(mail.build());
-      SendGrid sendGrid = new SendGrid(emailRequest.getApiKey());
-      Response response = sendGrid.api(request);
-
-      if (response.getStatusCode() >= 400) {
-        log.error("Failed to send email to -> {}: {}", recipient, response.getBody());
-
-      } else {
-        success++;
-        emailTrackingService.incrementEmailCount();
-        System.out.println("Email sent to -> " + recipient);
+        messages.add(msg);
+      } catch (MessagingException e) {
+        log.error("Failed to prepare invitation for {}: {}", email, e.getMessage());
       }
     }
 
-    emailRequest.setTotal(total);
-    emailRequest.setSuccess(success);
-    emailRequest.setFailed(total - success);
+    if (!messages.isEmpty()) {
+      // send them all in one SMTP session
+      mailSender.send(messages.toArray(new MimeMessage[0]));
+      emailTrackingService.incrementEmailCount(messages.size());
+      log.info("Total emails sent {}", messages.size());
+    }
     emailRepository.save(emailRequest);
-
-    System.out.println("-----------------------------------");
-    System.out.println("Total Email: " + total);
-    System.out.println("Success email: " + success);
-    System.out.println("Failed email: " + (total - success));
   }
 
 }

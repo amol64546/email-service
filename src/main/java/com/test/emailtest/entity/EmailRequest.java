@@ -1,11 +1,11 @@
 package com.test.emailtest.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Transient;
@@ -21,7 +21,8 @@ import org.springframework.web.multipart.MultipartFile;
 public class EmailRequest {
 
   @Id
-  private String id;
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private int id;
 
   @ElementCollection
   @CollectionTable(name = "email_request_to", joinColumns = @JoinColumn(name = "email_request_id"))
@@ -33,21 +34,7 @@ public class EmailRequest {
   @Column(columnDefinition = "TEXT")
   private String body;
 
-  @JsonIgnore
-  private String fromEmail;
-
-  private int total;
-
-  private int success;
-
-  private int failed;
-
-  @JsonIgnore
   @Transient
-  private String apiKey;
-
-  @Transient
-  @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)  // ignore during serialization but include during deserialization
   private MultipartFile attachment;
 
   @Override

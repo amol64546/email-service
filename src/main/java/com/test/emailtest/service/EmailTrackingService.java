@@ -1,7 +1,6 @@
 package com.test.emailtest.service;
 
 import com.test.emailtest.entity.EmailCount;
-import com.test.emailtest.exception.EmailLimitExceededException;
 import com.test.emailtest.repo.EmailCountRepository;
 import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +14,7 @@ public class EmailTrackingService {
   private final EmailCountRepository emailCountRepository;
 
   @Transactional
-  public void incrementEmailCount() {
+  public void incrementEmailCount(int count) {
     LocalDate today = LocalDate.now();  // Get the current date
 
     // Find if an entry for today already exists
@@ -28,12 +27,8 @@ public class EmailTrackingService {
           return newEmailCount;
         });
 
-    if (emailCount.getCount() >= 100) {
-      throw new EmailLimitExceededException("The daily email limit of 100 has been reached.");
-    }
-
     // Increment the email count
-    emailCount.setCount(emailCount.getCount() + 1);
+    emailCount.setCount(emailCount.getCount() + count);
 
     // Save the updated entry
     emailCountRepository.save(emailCount);
