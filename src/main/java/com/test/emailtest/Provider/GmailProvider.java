@@ -9,7 +9,7 @@ import java.util.Map;
 import org.springframework.stereotype.Component;
 
 @Component
-public class GmailProvider implements IEmailProvider {
+public class GmailProvider {
 
   public Map<String, String> getGmailProperties() {
     Map<String, String> propertiesMap = new HashMap<>();
