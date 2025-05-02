@@ -5,6 +5,7 @@ import com.test.emailtest.repo.EmailRepository;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +35,8 @@ public class EmailService {
   }
 
   @Async
-  public void sendEmail(EmailRequest emailRequest, String toEmail) {
+  public void sendEmail(EmailRequest emailRequest, String toEmail)
+      throws UnsupportedEncodingException {
     try {
       MimeMessage msg = mailSender.createMimeMessage();
       MimeMessageHelper helper = new MimeMessageHelper(msg, true);
@@ -42,6 +44,7 @@ public class EmailService {
       helper.setSubject(emailRequest.getSubject());
       helper.setTo(toEmail);
       helper.setText(emailRequest.getBody(), false);
+      helper.setFrom("amol64546@gmail.com", "Amol Nakhate");
 
       // Add attachment (MultipartFile)
       if (emailRequest.getAttachment() != null && !emailRequest.getAttachment().isEmpty()) {
