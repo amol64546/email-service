@@ -34,12 +34,13 @@ public class EmailController {
   public ResponseEntity<ModelMap> getEmailCountToday() {
     ModelMap response = new ModelMap()
         .addAttribute("today's used limit", emailTrackingService.getEmailCountForToday())
+        .addAttribute("today's remaining limit", 100 - emailTrackingService.getEmailCountForToday())
         .addAttribute("today's total limit", 100);
     return ResponseEntity.status(HttpStatus.OK)
         .body(response);
   }
 
-  @GetMapping("/{id}/email-status")
+  @GetMapping("/email-status/{id}")
   public ResponseEntity<EmailRequest> getEmailStatus(
       @PathVariable String id
   ) {

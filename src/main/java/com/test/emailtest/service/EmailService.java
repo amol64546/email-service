@@ -5,12 +5,16 @@ import com.sendgrid.Request;
 import com.sendgrid.Response;
 import com.sendgrid.SendGrid;
 import com.sendgrid.helpers.mail.Mail;
+import com.sendgrid.helpers.mail.objects.Attachments;
+import com.sendgrid.helpers.mail.objects.ClickTrackingSetting;
 import com.sendgrid.helpers.mail.objects.Content;
 import com.sendgrid.helpers.mail.objects.Email;
 import com.sendgrid.helpers.mail.objects.Personalization;
+import com.sendgrid.helpers.mail.objects.TrackingSettings;
 import com.test.emailtest.entity.EmailRequest;
 import com.test.emailtest.repo.EmailRepository;
 import java.io.IOException;
+import java.util.Base64;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -39,10 +43,31 @@ public class EmailService {
       mail.setSubject(emailRequest.getSubject());
       mail.addContent(new Content("text/plain", emailRequest.getBody()));
 
+      TrackingSettings trackingSettings = new TrackingSettings();
+      ClickTrackingSetting clickTrackingSetting = new ClickTrackingSetting();
+      clickTrackingSetting.setEnable(false);
+      clickTrackingSetting.setEnableText(false);
+      trackingSettings.setClickTrackingSetting(clickTrackingSetting);
+      mail.setTrackingSettings(trackingSettings);
+
       // Personalization for each recipient
       Personalization personalization = new Personalization();
       personalization.addTo(new Email(recipient));
       mail.addPersonalization(personalization);
+
+
+      // Attachment (if present)
+      if (emailRequest.getAttachment() != null && !emailRequest.getAttachment().isEmpty()) {
+        Attachments attachments = new Attachments();
+        byte[] fileBytes = emailRequest.getAttachment().getBytes();
+        String encoded = Base64.getEncoder().encodeToString(fileBytes);
+
+        attachments.setContent(encoded);
+        attachments.setType(emailRequest.getAttachment().getContentType());
+        attachments.setFilename(emailRequest.getAttachment().getOriginalFilename());
+        attachments.setDisposition("attachment");
+        mail.addAttachments(attachments);
+      }
 
       // Send email
       Request request = new Request();

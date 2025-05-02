@@ -24,7 +24,7 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(EmailRequestNotFoundException.class)
   public ResponseEntity<ErrorResponse> handleNotFound(EmailRequestNotFoundException ex) {
     ErrorResponse errorResponse = new ErrorResponse(
-        HttpStatus.FORBIDDEN.value(),
+        HttpStatus.NOT_FOUND.value(),
         ex.getMessage()
     );
 
